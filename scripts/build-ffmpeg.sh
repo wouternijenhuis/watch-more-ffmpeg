@@ -128,12 +128,21 @@ assert_lgpl_config() {
   done
 }
 
-write_info_plist() { # path family
-  local path="$1" family="$2" platforms min_key min_value
+write_info_plist() { # path family sdk
+  # One platform per slice: App Store Connect rejects a device framework whose
+  # CFBundleSupportedPlatforms also lists the simulator (validation error 91177).
+  local path="$1" family="$2" sdk="$3" platforms min_key min_value
   case "$family" in
-    macos) platforms="MacOSX"; min_key="LSMinimumSystemVersion"; min_value="14.0" ;;
-    ios)   platforms="iPhoneOS iPhoneSimulator"; min_key="MinimumOSVersion"; min_value="17.0" ;;
-    tvos)  platforms="AppleTVOS AppleTVSimulator"; min_key="MinimumOSVersion"; min_value="17.0" ;;
+    macos) min_key="LSMinimumSystemVersion"; min_value="14.0" ;;
+    ios|tvos) min_key="MinimumOSVersion"; min_value="17.0" ;;
+  esac
+  case "$sdk" in
+    macosx) platforms="MacOSX" ;;
+    iphoneos) platforms="iPhoneOS" ;;
+    iphonesimulator) platforms="iPhoneSimulator" ;;
+    appletvos) platforms="AppleTVOS" ;;
+    appletvsimulator) platforms="AppleTVSimulator" ;;
+    *) die "no platform name for SDK $sdk" ;;
   esac
   {
     cat <<PLIST
@@ -328,7 +337,7 @@ link_framework() { # slice sdk target family
   find "$header_dir" -name '*.h' -exec perl -pi -e 's{^(\s*#\s*include\s+)"((?:libav|libsw)[a-z]*/[^"]+)"}{$1<FFmpeg/$2>}' {} +
   write_umbrella_header "$header_dir/FFmpeg.h"
   printf 'framework module FFmpeg {\n    umbrella header "FFmpeg.h"\n    export *\n}\n' > "$bin_dir/Modules/module.modulemap"
-  write_info_plist "$res_dir/Info.plist" "$family"
+  write_info_plist "$res_dir/Info.plist" "$family" "$sdk"
   write_privacy_manifest "$res_dir/PrivacyInfo.xcprivacy"
   cp "$SOURCE_DIR/COPYING.LGPLv2.1" "$res_dir/LICENSE"
 

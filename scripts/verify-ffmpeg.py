@@ -105,6 +105,11 @@ def inspect_slice(entry):
     info = plistlib.loads(find_framework_file(framework, "Info.plist").read_bytes())
     if info.get("CFBundleIdentifier") != "net.devdad.watchmore.FFmpeg" or info.get("CFBundleExecutable") != "FFmpeg":
         raise ValueError(f"{identifier}: unexpected Info.plist identity")
+    # App Store Connect rejects a bundle listing more than one platform (validation error 91177).
+    expected_platform = {"ios-arm64": "iPhoneOS", "ios-arm64-simulator": "iPhoneSimulator", "tvos-arm64": "AppleTVOS",
+                         "tvos-arm64-simulator": "AppleTVSimulator", "macos-arm64": "MacOSX"}.get(identifier)
+    if info.get("CFBundleSupportedPlatforms") != [expected_platform]:
+        raise ValueError(f"{identifier}: CFBundleSupportedPlatforms {info.get('CFBundleSupportedPlatforms')} != [{expected_platform}]")
     vt_path = ARTIFACTS / "config" / f"{identifier}-vt-filters.txt"
     return {
         "identifier": identifier,
